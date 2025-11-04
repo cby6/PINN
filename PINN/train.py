@@ -48,7 +48,7 @@ def train(args):
         u_f = PINN(torch.cat([x_f, y_f], dim=1))
         PDE_ = PDE(u_f, x_f, y_f)
         mse_PDE = args.criterion(PDE_, torch.zeros_like(PDE_))
-        # 局部采点
+
         # boundary
 
         x_rand_1 = ((args.x_left + args.x_right) / 2 + (args.x_right - args.x_left) *
@@ -75,21 +75,21 @@ def train(args):
         ybc_r = (args.y_right * torch.ones_like(x_rand_1)
                  ).requires_grad_(True)
 
-        # is_neumann_boundary  下
+        # is_neumann_boundary down
         u_b_1 = (PINN(torch.cat([x_rand_1, ybc_l], dim=1)))
         BC_1 = is_neumann_boundary_y(u_b_1, x_rand_1, ybc_l)
         mse_BC_1 = args.criterion(BC_1, torch.zeros_like(BC_1))
 
-        # is_neumann_boundary上
+        # is_neumann_boundary up
         u_b_2 = PINN(torch.cat([x_rand_2, ybc_r], dim=1))
         BC_2 = is_neumann_boundary_y(u_b_2, x_rand_2, ybc_r)
         mse_BC_2 = args.criterion(BC_2, torch.zeros_like(BC_2))
 
-        # is_dirichlet_boundary左
+        # is_dirichlet_boundary left
         u_b_3 = PINN(torch.cat([xbc_l, y_rand_1], dim=1))
         mse_BC_3 = args.criterion(u_b_3, torch.zeros_like(u_b_3))
 
-        # is_dirichlet_boundary右
+        # is_dirichlet_boundary right
         u_b_4 = PINN(torch.cat([xbc_r, y_rand_2], dim=1))
         mse_BC_4 = args.criterion(u_b_4, torch.zeros_like(u_b_4))
 
