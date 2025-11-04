@@ -122,7 +122,7 @@ if __name__ == "__main__":
             self.optimizer = torch.optim.Adam
             self.activation = torch.tanh
             self.activ_name = 'tanh'
-            self.x_left = 1
+            self.x_left = -1
             self.x_right = 1
             self.y_left = -1
             self.y_right = 1
