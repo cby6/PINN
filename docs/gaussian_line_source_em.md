@@ -1,8 +1,12 @@
 # classic 2-D time-harmonic EM problem with Gaussian pulse line source
 
+![3D view](3d_view.png) ![2D view](2d_view.png)
+
+![normalized Gaussian pulse](normalized-Gaussian-pulse.png)
+
 ## EM formula
 
-$$\frac{\partial ^2Ez}{partial x^2}+\frac{\partial ^2Ez}{partial y^2}-με\frac{\partial ^2Ez}{partial t^2}=-μI_0e^{-\frac{(t-t_0)^2}{τ^2}}$$
+$$\frac{\partial ^2Ez}{\partial x^2}+\frac{\partial ^2Ez}{\partial y^2}-με\frac{\partial ^2Ez}{\partial t^2}=-μI_0e^{-\frac{(t-t_0)^2}{τ^2}}$$
 
 ## Boundary condition
 
