@@ -33,8 +33,7 @@ def train(args):
     optimizer = args.optimizer(PINN.parameters(), args.lr)
 
     loss_history = []
-    for epoch in range(100):
-        # for epoch in range(args.epochs):
+    for epoch in range(args.epochs):
         optimizer.zero_grad()
         # inside
         x_Ez = ((args.x_left + args.x_right) / 2 + (args.x_right - args.x_left) *
@@ -129,7 +128,7 @@ if __name__ == "__main__":
     class ARGS():
         def __init__(self):
             self.seq_net = [3, 50, 50, 50, 50, 50, 50, 1]
-            self.epochs = 60000
+            self.epochs = 100
             self.n_f = 20000
             self.n_f_1 = 10000
             self.n_f_2 = 10000
