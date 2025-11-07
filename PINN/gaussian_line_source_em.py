@@ -6,11 +6,12 @@ import numpy as np
 from torch.autograd import grad
 from networks import Net
 
-mu = 1.0
-epsilon = 0.01
-I_0 = 1.0
-tau = 1.0
-c = 1.0
+
+mu = 4 * np.pi * 1e-7 # vacuum permeability
+epsilon = 8.854e-12 # vacuum permittivity
+I_0 = 1.0 # current amplitude
+tau = 0.1e-9 # pulse width
+c = 1.0 / np.sqrt(mu * epsilon) # speed of light
 
 def setup_seed(seed):
     torch.manual_seed(seed)
