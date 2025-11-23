@@ -81,35 +81,35 @@ def train(args):
         xbc_r = (args.x_right * torch.ones_like(x_rand_1)
                  ).requires_grad_(True)
 
-        ybc_l = (args.y_left * torch.ones_like(x_rand_1)
+        ybc_l = (args.y_left * torch.ones_like(y_rand_1)
                  ).requires_grad_(True)
-        ybc_r = (args.y_right * torch.ones_like(x_rand_1)
+        ybc_r = (args.y_right * torch.ones_like(y_rand_1)
                  ).requires_grad_(True)
 
         # boundary_condition down
         Ez_b_down = PINN(torch.cat([x_rand_1, ybc_l, t_rand_1], dim=1))
-        BC_down = d(Ez_b_down, y_rand_1) + 1 / c * d(Ez_b_down, t_rand_1)
+        BC_down = d(Ez_b_down, ybc_l) + 1 / c * d(Ez_b_down, t_rand_1)
         mse_BC_down = args.criterion(BC_down, torch.zeros_like(BC_down))
 
         # boundary_condition up
         Ez_b_up = PINN(torch.cat([x_rand_2, ybc_r, t_rand_2], dim=1))
-        BC_up = d(Ez_b_up, y_rand_2) - 1 / c * d(Ez_b_up, t_rand_2)
+        BC_up = d(Ez_b_up, ybc_r) - 1 / c * d(Ez_b_up, t_rand_2)
         mse_BC_up = args.criterion(BC_up, torch.zeros_like(BC_up))
 
         # boundary_condition left
         Ez_b_left = PINN(torch.cat([xbc_l, y_rand_1, t_rand_1], dim=1))
-        BC_left = d(Ez_b_left, x_rand_1) + 1 / c * d(Ez_b_left, t_rand_1)
+        BC_left = d(Ez_b_left, xbc_l) + 1 / c * d(Ez_b_left, t_rand_1)
         mse_BC_left = args.criterion(BC_left, torch.zeros_like(BC_left))
 
         # boundary_condition right
         Ez_b_right = PINN(torch.cat([xbc_r, y_rand_2, t_rand_2], dim=1))
-        BC_right = d(Ez_b_right, x_rand_2) - 1 / c * d(Ez_b_right, t_rand_2)
+        BC_right = d(Ez_b_right, xbc_r) - 1 / c * d(Ez_b_right, t_rand_2)
         mse_BC_right = args.criterion(BC_right, torch.zeros_like(BC_right))
 
         mse_BC = mse_BC_down + mse_BC_up + mse_BC_left + mse_BC_right
 
         # initial condition
-        Ez_0 = PINN(torch.cat([[0], [0], [0]], dim=1))
+        Ez_0 = PINN(torch.zeros(1, 3))
         mse_IC = args.criterion(Ez_0, torch.zeros_like(Ez_0))
 
         # loss
