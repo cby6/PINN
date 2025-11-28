@@ -12,7 +12,8 @@ $$\frac{\partial ^2Az}{\partial x^2}+\frac{\partial ^2Az}{\partial y^2}-με\fra
 
 ## Boundary condition (Dirichlet)
 
-target_boundary_value:  $$A_z^bc(x,y,t) = - μ\frac{J(t)}{2π}ln\frac{{\sqrt}{x^2+y^2}}{r_0}$$
+target_boundary_value: 
+$$A_z^bc(x,y,t) = - μ\frac{J(t)}{2π}ln\frac{{\sqrt}{x^2+y^2}}{r_0}$$
 
 ### left
 
