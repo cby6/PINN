@@ -113,8 +113,8 @@ def train(args):
     # plot Az in 2D space at t = 0.5
     time = 0.3
     fig, ax = plt.subplots(1, 3, figsize=(12, 5))
-    xx = torch.linspace(-1, 1, 400).cpu()
-    yy = torch.linspace(-1, 1, 400).cpu()
+    xx = torch.linspace(-1, 1, 125).cpu()
+    yy = torch.linspace(-1, 1, 125).cpu()
     x1, y1 = torch.meshgrid([xx, yy], indexing="ij")
     s1 = x1.shape
     x1 = x1.reshape((-1, 1)).requires_grad_(True)
@@ -132,7 +132,7 @@ def train(args):
     ax[0].set_ylabel('y')
     ax[0].set_title('Az')
 
-    amplifying_factor = 8000
+    amplifying_factor = 7000
     dAz_dy = d(Az, y1) * amplifying_factor
     dAz_dx = d(Az, x1) * amplifying_factor
     Bx = dAz_dy.reshape(s1)
