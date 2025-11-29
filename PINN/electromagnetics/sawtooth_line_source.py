@@ -110,13 +110,65 @@ def train(args):
         loss.backward()
         optimizer.step()
 
+    # plot Az in 2D space at t = 0.5
+    time = 0.3
+    fig, ax = plt.subplots(1, 3, figsize=(12, 5))
+    xx = torch.linspace(-1, 1, 400).cpu()
+    yy = torch.linspace(-1, 1, 400).cpu()
+    x1, y1 = torch.meshgrid([xx, yy], indexing="ij")
+    s1 = x1.shape
+    x1 = x1.reshape((-1, 1)).requires_grad_(True)
+    y1 = y1.reshape((-1, 1)).requires_grad_(True)
+    t1 = (time * torch.ones_like(x1)).requires_grad_(True)
+    x = torch.cat([x1, y1, t1], dim=1)
+    Az = PINN(x)
+    Az_out = Az.reshape(s1)
+    out = Az_out.cpu().T.detach().numpy()[::-1, :]
+    im1 = ax[0].imshow(out, cmap='jet')
+    plt.colorbar(im1, ax=ax[0])
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    ax[0].set_xlabel('x')
+    ax[0].set_ylabel('y')
+    ax[0].set_title('Az')
+
+    amplifying_factor = 8000
+    dAz_dy = d(Az, y1) * amplifying_factor
+    dAz_dx = d(Az, x1) * amplifying_factor
+    Bx = dAz_dy.reshape(s1)
+    By = (-dAz_dx).reshape(s1)
+    Xg = x1.reshape(s1).detach().cpu().numpy()
+    Yg = y1.reshape(s1).detach().cpu().numpy()
+    U = Bx.detach().cpu().numpy()
+    V = By.detach().cpu().numpy()
+    step = 5
+    C = np.hypot(U[::step, ::step], V[::step, ::step])
+    Q = ax[1].quiver(
+        Xg[::step, ::step], Yg[::step, ::step],
+        U[::step, ::step], V[::step, ::step],
+        C, cmap='jet', angles='xy', scale_units='xy', scale=1.0, width=0.002
+    )
+    plt.colorbar(Q, ax=ax[1])
+    ax[1].set_aspect('equal', adjustable='box')
+    ax[1].set_xlabel('x')
+    ax[1].set_ylabel('y')
+    ax[1].set_title('Magnetic field B (t=0.5)')
+
+
+    ax[2].plot(loss_history)
+    ax[2].set_yscale('log')
+    ax[2].legend(('PDE loss', 'BC loss', 'Total loss'))
+
+    # plt.savefig('./result/loss.png')
+    plt.show()
+
     return loss_history
 
 if __name__ == "__main__":
     class ARGS():
         def __init__(self):
             self.seq_net = [3, 50, 50, 50, 50, 50, 50, 1]
-            self.epochs = 100
+            self.epochs = 900
             self.n_f = 20000
             self.n_f_1 = 10000
             self.n_f_2 = 10000
