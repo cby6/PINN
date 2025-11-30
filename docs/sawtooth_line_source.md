@@ -14,7 +14,7 @@ $$\frac{\partial ^2Az}{\partial x^2}+\frac{\partial ^2Az}{\partial y^2}-με\fra
 
 ### target_boundary_value:
 
-$$A_z^bc(x,y,t) = - μ\frac{J(t)}{2π}ln\frac{{\sqrt}{x^2+y^2}}{r_0}$$
+$$A_z^bc(x,y,t) = - μ\frac{J(t)}{2π}ln\frac{\sqrt{x^2+y^2}}{r_0}$$
 
 ### left
 
@@ -34,4 +34,4 @@ $$A_z^{NN}(x,1,t) - A_z^{bc}(x,1,t) = 0$$
 
 ## Initial condition
 
-$$A_z(x,y,0) = - μ\frac{J(0)}{2π}ln\frac{{\sqrt}{x^2+y^2}}{r_0}$$
+$$A_z(x,y,0) = - μ\frac{J(0)}{2π}ln\frac{\sqrt{x^2+y^2}}{r_0}$$
