@@ -111,10 +111,10 @@ def train(args):
         optimizer.step()
 
     # plot Az in 2D space at t = 0.5
-    time = 0.3
+    time = 0.7
     fig, ax = plt.subplots(1, 3, figsize=(12, 5))
-    xx = torch.linspace(-1, 1, 125).cpu()
-    yy = torch.linspace(-1, 1, 125).cpu()
+    xx = torch.linspace(args.x_left, args.x_right, 125).cpu()
+    yy = torch.linspace(args.y_left, args.y_right, 125).cpu()
     x1, y1 = torch.meshgrid([xx, yy], indexing="ij")
     s1 = x1.shape
     x1 = x1.reshape((-1, 1)).requires_grad_(True)
@@ -130,7 +130,7 @@ def train(args):
     ax[0].set_yticks([])
     ax[0].set_xlabel('x')
     ax[0].set_ylabel('y')
-    ax[0].set_title('Az')
+    ax[0].set_title(f'Az (t={time})')
 
     amplifying_factor = 7000
     dAz_dy = d(Az, y1) * amplifying_factor
@@ -152,7 +152,7 @@ def train(args):
     ax[1].set_aspect('equal', adjustable='box')
     ax[1].set_xlabel('x')
     ax[1].set_ylabel('y')
-    ax[1].set_title('Magnetic field B (t=0.5)')
+    ax[1].set_title(f'Magnetic field B (t={time})')
 
 
     ax[2].plot(loss_history)
