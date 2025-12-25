@@ -5,6 +5,7 @@ import random
 import numpy as np
 from torch.autograd import grad
 from PINN.networks import Net
+import sys
 
 mu = 4 * np.pi * 1e-7 # vacuum permeability
 epsilon = 8.854e-12 # vacuum permittivity
@@ -12,7 +13,8 @@ I_0 = 1.0 # current amplitude
 tau = 0.1e-9 # pulse width
 c = 1.0 / np.sqrt(mu * epsilon) # speed of light
 beta = 50
-r_0 = 1.0 # reference radius
+f_0 = 50 # frequency
+r_0 = 0.01 # reference radius
 
 def setup_seed(seed):
     torch.manual_seed(seed)
@@ -25,7 +27,8 @@ def d(f, x):
     return grad(f, x, grad_outputs=torch.ones_like(f), create_graph=True, only_inputs=True)[0]
 
 def I(t):
-    return 2 * I_0 / np.pi * torch.atan(beta * torch.tan(np.pi * t / tau))
+    # return 2 * I_0 / np.pi * torch.atan(beta * torch.tan(np.pi * t / tau))
+    return I_0 * torch.sin(2 * torch.pi * f_0 * t)
 
 def PDE(Az, x_f, y_f, t_f):
     return d(d(Az, x_f), x_f) + d(d(Az, y_f), y_f) - mu * epsilon * d(d(Az, t_f), t_f) + mu * I(t_f)
@@ -60,42 +63,62 @@ def train(args):
         PDE_ = PDE(Az, x_Az, y_Az, t_Az)
         mse_PDE = args.criterion(PDE_, torch.zeros_like(PDE_))
 
-        # boundary
-        x_rand = ((args.x_left + args.x_right) / 2 + (args.x_right - args.x_left) *
-                (torch.rand(size=(args.n_b_l, 1), dtype=torch.float) - 0.5)).requires_grad_(True)
+        # # outer boundary
+        # # uniform plus extra focus near [-0.05,-0.01] and [0.01,0.05]
+        # n_uniform = args.n_b_l
+        # n_focus = int(args.n_b_l / 5)
 
-        y_rand = ((args.y_left + args.y_right) / 2 + (args.y_right - args.y_left) *
-                (torch.rand(size=(args.n_b_l, 1), dtype=torch.float) - 0.5)).requires_grad_(True)
+        # x_uniform = ((args.x_left + args.x_right) / 2 + (args.x_right - args.x_left) *
+        #         (torch.rand(size=(n_uniform, 1), dtype=torch.float) - 0.5))
+        # x_focus_pos = torch.rand(size=(n_focus, 1), dtype=torch.float) * (0.05 - 0.01) + 0.01
+        # x_focus_neg = -(torch.rand(size=(n_focus, 1), dtype=torch.float) * (0.05 - 0.01) + 0.01)
+        # x_rand = torch.cat([x_uniform, x_focus_pos, x_focus_neg], dim=0).requires_grad_(True)
 
-        t_rand = ((args.t_left + args.t_right) / 2 + (args.t_right - args.t_left) *
-                (torch.rand(size=(args.n_b_l, 1), dtype=torch.float) - 0.5)).requires_grad_(True)
+        # y_uniform = ((args.y_left + args.y_right) / 2 + (args.y_right - args.y_left) *
+        #         (torch.rand(size=(n_uniform, 1), dtype=torch.float) - 0.5))
+        # y_focus_pos = torch.rand(size=(n_focus, 1), dtype=torch.float) * (0.05 - 0.01) + 0.01
+        # y_focus_neg = -(torch.rand(size=(n_focus, 1), dtype=torch.float) * (0.05 - 0.01) + 0.01)
+        # y_rand = torch.cat([y_uniform, y_focus_pos, y_focus_neg], dim=0).requires_grad_(True)
 
-        xbc_l = (args.x_left * torch.ones_like(x_rand)).requires_grad_(True)
-        xbc_r = (args.x_right * torch.ones_like(x_rand)).requires_grad_(True)
-        ybc_l = (args.y_left * torch.ones_like(y_rand)).requires_grad_(True)
-        ybc_r = (args.y_right * torch.ones_like(y_rand)).requires_grad_(True)
+        # t_rand = ((args.t_left + args.t_right) / 2 + (args.t_right - args.t_left) *
+        #         (torch.rand(size=(x_rand.shape[0], 1), dtype=torch.float) - 0.5)).requires_grad_(True)
 
-        # boundary_condition left
-        BC_left = PINN(torch.cat([xbc_l, y_rand, t_rand], dim=1)) - Az_boundary(xbc_l, y_rand, t_rand)
-        mse_BC_left = args.criterion(BC_left, torch.zeros_like(BC_left))
+        # xbc_l = (args.x_left * torch.ones_like(x_rand)).requires_grad_(True)
+        # xbc_r = (args.x_right * torch.ones_like(x_rand)).requires_grad_(True)
+        # ybc_l = (args.y_left * torch.ones_like(y_rand)).requires_grad_(True)
+        # ybc_r = (args.y_right * torch.ones_like(y_rand)).requires_grad_(True)
+
+        # # boundary_condition left
+        # BC_left = PINN(torch.cat([xbc_l, y_rand, t_rand], dim=1)) - Az_boundary(xbc_l, y_rand, t_rand)
+        # mse_BC_left = args.criterion(BC_left, torch.zeros_like(BC_left))
         
-        # boundary_condition right
-        BC_right = PINN(torch.cat([xbc_r, y_rand, t_rand], dim=1)) - Az_boundary(xbc_r, y_rand, t_rand)
-        mse_BC_right = args.criterion(BC_right, torch.zeros_like(BC_right))
+        # # boundary_condition right
+        # BC_right = PINN(torch.cat([xbc_r, y_rand, t_rand], dim=1)) - Az_boundary(xbc_r, y_rand, t_rand)
+        # mse_BC_right = args.criterion(BC_right, torch.zeros_like(BC_right))
 
-        # boundary_condition bottom
-        BC_bottom = PINN(torch.cat([x_rand, ybc_l, t_rand], dim=1)) - Az_boundary(x_rand, ybc_l, t_rand)
-        mse_BC_bottom = args.criterion(BC_bottom, torch.zeros_like(BC_bottom))
+        # # boundary_condition bottom
+        # BC_bottom = PINN(torch.cat([x_rand, ybc_l, t_rand], dim=1)) - Az_boundary(x_rand, ybc_l, t_rand)
+        # mse_BC_bottom = args.criterion(BC_bottom, torch.zeros_like(BC_bottom))
 
-        # boundary_condition top
-        BC_top = PINN(torch.cat([x_rand, ybc_r, t_rand], dim=1)) - Az_boundary(x_rand, ybc_r, t_rand)
-        mse_BC_top = args.criterion(BC_top, torch.zeros_like(BC_top))
+        # # boundary_condition top
+        # BC_top = PINN(torch.cat([x_rand, ybc_r, t_rand], dim=1)) - Az_boundary(x_rand, ybc_r, t_rand)
+        # mse_BC_top = args.criterion(BC_top, torch.zeros_like(BC_top))
 
-        mse_BC = mse_BC_left + mse_BC_right + mse_BC_bottom + mse_BC_top
+        # mse_BC = mse_BC_left + mse_BC_right + mse_BC_bottom + mse_BC_top
+
+        # outer boundary
+        theta = 2.0 * torch.pi * torch.rand(size=(args.n_b_l, 1), dtype=torch.float)
+        x_bc = 0.1 * torch.cos(theta).requires_grad_(True)
+        y_bc = 0.1 * torch.sin(theta).requires_grad_(True)
+        t_bc = ((args.t_left + args.t_right) / 2 + (args.t_right - args.t_left) * 
+        (torch.rand(size=(args.n_b_l, 1), dtype=torch.float) - 0.5)).requires_grad_(True)
+        Az_bc_pred = PINN(torch.cat([x_bc, y_bc, t_bc], dim=1))
+        # mse_BC_inner = args.criterion(Az_bc_pred, torch.zeros_like(Az_bc_pred))
+        mse_BC = args.criterion(Az_bc_pred, Az_boundary(x_bc, y_bc, t_bc))
 
         # initial condition
-        t_0 = args.t_left * torch.ones_like(x_Az)
-        Az_0 = PINN(torch.cat([x_Az, y_Az, t_0], dim=1)) - Az_boundary(x_Az, y_Az, t_0)
+        t_0 = args.t_left * torch.ones_like(x_Az).requires_grad_(True)
+        Az_0 = PINN(torch.cat([x_Az, y_Az, t_0], dim=1))
         mse_IC = args.criterion(Az_0, torch.zeros_like(Az_0))
 
         # loss
@@ -110,8 +133,8 @@ def train(args):
         loss.backward()
         optimizer.step()
 
-    # plot Az in 2D space at t = 0.5
-    time = 0.7
+    # plot Az in 2D space at t = 0.05
+    time = 0.05
     fig, ax = plt.subplots(1, 3, figsize=(12, 5))
     xx = torch.linspace(args.x_left, args.x_right, 125).cpu()
     yy = torch.linspace(args.y_left, args.y_right, 125).cpu()
@@ -157,7 +180,7 @@ def train(args):
 
     ax[2].plot(loss_history)
     ax[2].set_yscale('log')
-    ax[2].legend(('PDE loss', 'BC loss', 'Total loss'))
+    ax[2].legend(('PDE loss', 'BC loss', 'IC loss', 'Total loss'))
 
     # plt.savefig('./result/loss.png')
     plt.show()
@@ -168,25 +191,26 @@ if __name__ == "__main__":
     class ARGS():
         def __init__(self):
             self.seq_net = [3, 50, 50, 50, 50, 50, 50, 1]
-            self.epochs = 900
-            self.n_f = 20000
-            self.n_f_1 = 10000
-            self.n_f_2 = 10000
+            self.epochs = 1800
+            self.n_f = 10000
+            # self.n_f_1 = 10000
+            # self.n_f_2 = 10000
             self.n_b_l = 5000
             self.PDE_panelty = 1.0
             self.BC_panelty = 1.0
+            self.BC_inner_panelty = 1.0
             self.IC_panelty = 1.0
             self.lr = 0.001
             self.criterion = torch.nn.MSELoss()
             self.optimizer = torch.optim.Adam
             self.activation = torch.tanh
             self.activ_name = 'tanh'
-            self.x_left = -1
-            self.x_right = 1
-            self.y_left = -1
-            self.y_right = 1
+            self.x_left = -0.1
+            self.x_right = 0.1
+            self.y_left = -0.1
+            self.y_right = 0.1
             self.t_left = 0
-            self.t_right = 1
+            self.t_right = 0.1
 
     args = ARGS()
     train(args)
