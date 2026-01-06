@@ -14,6 +14,11 @@ $${\huge J_θ=e^{-(\frac{r-r_{coil}}{coil\textunderscore thickness})^2*[sigmoid(
 $${\huge \frac{\partial ^2A_θ}{\partial r^2}+\frac{1}{r}*\frac{\partial A_θ}{\partial r}+\frac{\partial ^2A_θ}{\partial z^2}-\frac{1}{r^2}*A_θ+μ
 *J_θ=0}$$
 
+r, θ, z: axis of Cylindrical Coordinates
+$$A_θ$$: magnetic vector potential
+$$J_θ$$: current density
+μ: magnetic permeability
+
 ## Boundary condition
 
 ### Outer boundary:
@@ -26,8 +31,8 @@ $${\huge A_θ = 0}$$
 
 ## Current density smooth approximation
 
-### current density along z axis
+### real current density along z axis
 <img src="current_density.png" alt="current density" width="400" />
 
-### differentiable smooth approximation of current density 
+### differentiable smooth approximation of current density for PINN
 <img src="current_density_smooth_approximation.png" alt="current density smooth approximation" width="400" />
