@@ -1,9 +1,9 @@
 # classic time-harmonic EM problem with pulsed current in solenoids
 
 <p>
-  <img src="3d_view.png" alt="3D view" width="240" />
-  <img src="front_view.png" alt="front view" width="240" />
-  <img src="side_view.png" alt="side view" width="240" />
+  <img src="3d_view.png" alt="3D view" width="400" />
+  <img src="front_view.png" alt="front view" width="400" />
+  <img src="side_view.png" alt="side view" width="400" />
 </p>
 
 
@@ -16,18 +16,18 @@ $${\huge \frac{\partial ^2A_θ}{\partial r^2}+\frac{1}{r}*\frac{\partial A_θ}{\
 
 ## Boundary condition
 
-### outer boundary:
+### Outer boundary:
 
 $${\huge \frac{\partial A_θ}{\partial r}=0}$$
 
-### inner boundary
+### Inner boundary
 
 $${\huge A_θ = 0}$$
 
 ## Current density smooth approximation
 
 ### current density along z axis
-<img src="current_density.png" alt="current density" width="240" />
+<img src="current_density.png" alt="current density" width="400" />
 
 ### differentiable smooth approximation of current density 
-<img src="current_density_smooth_approximation.png" alt="current density smooth approximation" width="240" />
+<img src="current_density_smooth_approximation.png" alt="current density smooth approximation" width="400" />
