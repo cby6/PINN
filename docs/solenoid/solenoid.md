@@ -6,6 +6,6 @@
 
 ## EM formula
 
-$$\frac{\partial ^2A}{\partial r^2}+\frac{1}{r}*\frac{\partial A}{\partial r}+\frac{\partial ^2A}{\partial z^2}-\frac{1}{r^2}*A=0$$
+$$\frac{\partial ^2A_θ}{\partial r^2}+\frac{1}{r}*\frac{\partial A_θ}{\partial r}+\frac{\partial ^2A_θ}{\partial z^2}-\frac{1}{r^2}*A_θ=0$$
 
 ## Boundary condition
