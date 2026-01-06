@@ -20,3 +20,11 @@ $${\huge \frac{\partial A_θ}{\partial r}=0}$$
 ### inner boundary
 
 $${\huge A_θ = 0}$$
+
+## Current density smooth approximation
+
+### current density along z axis
+![current density](current_density.png)
+
+### differentiable smooth approximation of current density 
+![current density smooth approximation](current_density_smooth_approximation.png)
