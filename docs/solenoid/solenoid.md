@@ -1,4 +1,4 @@
-# classic time-harmonic EM problem with pulsed current in solenoids
+# time-harmonic EM problem with pulsed current in solenoids
 
 <p>
   <img src="3d_view.png" alt="3D view" width="400" />
@@ -14,18 +14,25 @@ $${\huge J_θ=e^{-(\frac{r-r_{coil}}{coil\textunderscore thickness})^2*[sigmoid(
 $${\huge \frac{\partial ^2A_θ}{\partial r^2}+\frac{1}{r}*\frac{\partial A_θ}{\partial r}+\frac{\partial ^2A_θ}{\partial z^2}-\frac{1}{r^2}*A_θ+μ
 *J_θ=0}$$
 
-r, θ, z: axis of Cylindrical Coordinates
-$$A_θ$$: magnetic vector potential
-$$J_θ$$: current density
-μ: magnetic permeability
+r, θ, z: axis of Cylindrical Coordinates  
+$$A_θ$$: magnetic vector potential  
+$$J_θ$$: current density  
+μ: magnetic permeability  
+
+## Input
+
+0.01 <= r <= 0.1 (r_coil = 0.04)  
+left coil: -0.35 <= z <= -0.05  
+right coil: 0.05 <= z <= 0.35  
+coil_thickness = 0.003  
 
 ## Boundary condition
 
-### Outer boundary:
+### Outer boundary (r = r_outer_boundary)
 
 $${\huge \frac{\partial A_θ}{\partial r}=0}$$
 
-### Inner boundary
+### Inner boundary (r = r_inner_boundary)
 
 $${\huge A_θ = 0}$$
 
