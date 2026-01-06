@@ -23,22 +23,22 @@ $$J_θ$$: current density
 
 0.01 <= r <= 0.1 (r_coil = 0.04, r_inner_boundary = 0.01, r_outer_boundary = 0.1)  
 coil 1 (left): -0.35 <= z <= -0.05  
-coil 1 (right): 0.05 <= z <= 0.35  
+coil 2 (right): 0.05 <= z <= 0.35  
 coil_thickness = 0.003  
 
 ## Boundary condition
 
-### Outer boundary (r = r_outer_boundary)
+### r = r_outer_boundary
 
 $${\huge \frac{\partial A_θ}{\partial r}=0}$$
 
-### Inner boundary (r = r_inner_boundary)
+### r = r_inner_boundary
 
 $${\huge A_θ = 0}$$
 
 ## Current density smooth approximation
 
-### real current density along z axis
+### real current density distributed along z axis
 <img src="current_density.png" alt="current density" width="400" />
 
 ### differentiable smooth approximation of current density for PINN
