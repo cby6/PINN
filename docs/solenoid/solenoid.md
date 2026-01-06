@@ -21,9 +21,9 @@ $$J_θ$$: current density
 
 ## Input
 
-0.01 <= r <= 0.1 (r_coil = 0.04)  
-left coil: -0.35 <= z <= -0.05  
-right coil: 0.05 <= z <= 0.35  
+0.01 <= r <= 0.1 (r_coil = 0.04, r_inner_boundary = 0.01, r_outer_boundary = 0.1)  
+coil 1 (left): -0.35 <= z <= -0.05  
+coil 1 (right): 0.05 <= z <= 0.35  
 coil_thickness = 0.003  
 
 ## Boundary condition
