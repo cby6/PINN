@@ -1,7 +1,10 @@
 # classic time-harmonic EM problem with pulsed current in solenoids
 
-![3D view](3d_view.png) ![front view](front_view.png) ![side view](side_view.png)
-
+<p>
+  <img src="3d_view.png" alt="3D view" width="240" />
+  <img src="front_view.png" alt="front view" width="240" />
+  <img src="side_view.png" alt="side view" width="240" />
+</p>
 
 
 ## PDE formula
@@ -24,7 +27,7 @@ $${\huge A_θ = 0}$$
 ## Current density smooth approximation
 
 ### current density along z axis
-![current density](current_density.png)
+<img src="current_density.png" alt="current density" width="240" />
 
 ### differentiable smooth approximation of current density 
-![current density smooth approximation](current_density_smooth_approximation.png)
+<img src="current_density_smooth_approximation.png" alt="current density smooth approximation" width="240" />
