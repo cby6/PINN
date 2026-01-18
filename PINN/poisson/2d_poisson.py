@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 import random
 import numpy as np
 from torch.autograd import grad
-from networks import Net
+from PINN.networks import Net
 
 def setup_seed(seed):
     torch.manual_seed(seed)
@@ -33,8 +33,8 @@ def train(args):
     optimizer = args.optimizer(PINN.parameters(), args.lr)
 
     loss_history = []
-    for epoch in range(100):
-        # for epoch in range(args.epochs):
+    # for epoch in range(100):
+    for epoch in range(args.epochs):
         optimizer.zero_grad()
         # inside
         x_f = ((args.x_left + args.x_right) / 2 + (args.x_right - args.x_left) *
@@ -106,11 +106,35 @@ def train(args):
         loss.backward()
         optimizer.step()
 
+    fig, ax = plt.subplots(1, 2, figsize=(12, 5))
+    xx = torch.linspace(-1, 1, 400).cpu()
+    yy = torch.linspace(-1, 1, 400).cpu()
+    x1, y1 = torch.meshgrid([xx, yy])
+    s1 = x1.shape
+    x1 = x1.reshape((-1, 1))
+    y1 = y1.reshape((-1, 1))
+    x = torch.cat([x1, y1], dim=1)
+    z = PINN(x)
+    z_out = z.reshape(s1)
+    out = z_out.cpu().T.detach().numpy()[::-1, :]
+    im1 = ax[0].imshow(out, cmap='jet')
+    plt.colorbar(im1, ax=ax[0])
+    ax[0].set_xticks([])
+    ax[0].set_yticks([])
+    ax[0].set_xlabel('x')
+    ax[0].set_ylabel('y')
+    ax[0].set_title('T')
+    ax[1].plot(loss_history)
+    ax[1].set_yscale('log')
+    ax[1].legend(('PDE loss', 'BC loss', 'Total loss'))
+
+    plt.show()
+
 if __name__ == "__main__":
     class ARGS():
         def __init__(self):
             self.seq_net = [2, 50, 50, 50, 50, 50, 50, 1]
-            self.epochs = 60000
+            self.epochs = 10000
             self.n_f = 20000
             self.n_f_1 = 10000
             self.n_f_2 = 10000
