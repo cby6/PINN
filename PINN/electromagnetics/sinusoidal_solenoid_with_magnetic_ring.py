@@ -49,6 +49,29 @@ def J_theta(r: torch.Tensor, z: torch.Tensor, t: torch.Tensor, args) -> torch.Te
     return args.current * time_factor * Jr * Jz
 
 
+def mu_r_field(r: torch.Tensor, z: torch.Tensor, args) -> torch.Tensor:
+    """Relative permeability μ_r(r,z) for a ferrite ring inside each coil.
+
+    Ring geometry (front view): core_r_inner <= r <= core_r_outer
+    Axial extent (side view): matches coil 1 and coil 2 z-intervals.
+
+    Uses smooth (sigmoid) transitions for differentiability.
+    """
+    H = _smooth_step
+    # radial shell
+    r_in = H(r - args.core_r_inner, args.core_sharpness)
+    r_out = H(args.core_r_outer - r, args.core_sharpness)
+    radial_shell = r_in * r_out
+
+    # axial extent: same as coil segments
+    z1 = H(z - args.z1_left, args.z_sharpness) * H(args.z1_right - z, args.z_sharpness)
+    z2 = H(z - args.z2_left, args.z_sharpness) * H(args.z2_right - z, args.z_sharpness)
+    axial = z1 + z2
+
+    core_mask = radial_shell * axial
+    return 1.0 + (args.mu_r_core - 1.0) * core_mask
+
+
 def PDE(u, r, z, t, args):
     """Axisymmetric PDE in cylindrical coordinates, stabilized at r≈0.
 
@@ -63,11 +86,22 @@ def PDE(u, r, z, t, args):
 
     so no divisions by r are required and r=0 is well-defined.
     """
+    # Use variable-permeability form:
+    #   -∂z(ν ∂Aθ/∂z) - ∂r(ν (1/r) ∂(rAθ)/∂r) = Jθ
+    # where ν = 1/μ.
+    #
+    # With Aθ = r*u:
+    #   ∂Aθ/∂z = r*u_z
+    #   (1/r) ∂(rAθ)/∂r = (1/r) ∂(r^2 u)/∂r = 2u + r*u_r
+    mu_local = mu * mu_r_field(r, z, args)
+    nu = 1.0 / mu_local
+
+    A_z = d(r * u, z)
     u_r = d(u, r)
-    u_rr = d(u_r, r)
-    u_zz = d(d(u, z), z)
-    lhs = r * (u_rr + u_zz) + 3.0 * u_r
-    return lhs + mu * J_theta(r, z, t, args)
+    flux_r = nu * (2.0 * u + r * u_r)
+
+    lhs = -d(nu * A_z, z) - d(flux_r, r)
+    return lhs - J_theta(r, z, t, args)
 
 def A_theta_boundary(u, r):
     # d/dr (A_theta) where A_theta = r*u  ->  dA/dr = u + r*u_r
@@ -103,7 +137,9 @@ def train(args):
         # t is randomly sampled between 0 and 1 (seconds)
         t = torch.rand((args.n_f, 1), dtype=torch.float).requires_grad_(True)
 
-        u = PINN(torch.cat([r, z, t], dim=1))
+        # Scale network output so that A_theta is in a realistic magnitude range.
+        # In air, ν=1/μ is huge, so the physical solution typically has very small A.
+        u = args.u_scale * PINN(torch.cat([r, z, t], dim=1))
         PDE_ = PDE(u, r, z, t, args)
         mse_PDE = args.criterion(PDE_, torch.zeros_like(PDE_))
 
@@ -116,12 +152,11 @@ def train(args):
         z_bc_high = 0.05 + (0.05 * torch.rand((n_half, 1), dtype=torch.float))  # [0.05, 0.1]
         z_bc = torch.cat([z_bc_low, z_bc_high], dim=0).requires_grad_(True)
         t_bc = torch.rand((args.n_b_l, 1), dtype=torch.float).requires_grad_(True)
-        u_bc = PINN(torch.cat([r_bc, z_bc, t_bc], dim=1))
+        u_bc = args.u_scale * PINN(torch.cat([r_bc, z_bc, t_bc], dim=1))
         dA_dr_bc = A_theta_boundary(u_bc, r_bc)
         mse_BC = args.criterion(dA_dr_bc, torch.zeros_like(dA_dr_bc))
 
         # z-boundary (Neumann): dA_theta/dz = 0 at z = ±0.1
-        # This helps remove odd-in-z nullspace modes and improves symmetry.
         n_half_z = args.n_b_z // 2
         r_zbc = (r_max * torch.rand((args.n_b_z, 1), dtype=torch.float) ** 2).requires_grad_(True)
         z_zbc = torch.cat(
@@ -132,43 +167,44 @@ def train(args):
             dim=0,
         ).requires_grad_(True)
         t_zbc = torch.rand((args.n_b_z, 1), dtype=torch.float).requires_grad_(True)
-        u_zbc = PINN(torch.cat([r_zbc, z_zbc, t_zbc], dim=1))
+        u_zbc = args.u_scale * PINN(torch.cat([r_zbc, z_zbc, t_zbc], dim=1))
         A_zbc = r_zbc * u_zbc
         dA_dz_bc = d(A_zbc, z_zbc)
         mse_ZBC = args.criterion(dA_dz_bc, torch.zeros_like(dA_dz_bc))
 
-        # symmetry about z=0 (even): u(r,z,t) == u(r,-z,t)  =>  A_theta=r*u is even in z
-        r_sym = (r_max * torch.rand((args.n_sym, 1), dtype=torch.float) ** 2)
+        # symmetry about z=0 (even): u(r,z,t) == u(r,-z,t)
+        r_sym = r_max * torch.rand((args.n_sym, 1), dtype=torch.float) ** 2
         z_sym = 0.1 * torch.rand((args.n_sym, 1), dtype=torch.float)  # [0, 0.1]
         t_sym = torch.rand((args.n_sym, 1), dtype=torch.float)
-        u_pos = PINN(torch.cat([r_sym, z_sym, t_sym], dim=1))
-        u_neg = PINN(torch.cat([r_sym, -z_sym, t_sym], dim=1))
+        u_pos = args.u_scale * PINN(torch.cat([r_sym, z_sym, t_sym], dim=1))
+        u_neg = args.u_scale * PINN(torch.cat([r_sym, -z_sym, t_sym], dim=1))
         mse_SYM = args.criterion(u_pos - u_neg, torch.zeros_like(u_pos))
 
-        # symmetry on-axis (targets what plot_B_yz visualizes): enforce u(0,z,t) == u(0,-z,t)
+        # symmetry on-axis (targets Bz(0,z)=2u(0,z)): u(0,z,t) == u(0,-z,t)
         r_sym0 = torch.zeros((args.n_sym_axis, 1), dtype=torch.float)
-        z_sym0 = 0.1 * torch.rand((args.n_sym_axis, 1), dtype=torch.float)  # [0, 0.1]
+        z_sym0 = 0.1 * torch.rand((args.n_sym_axis, 1), dtype=torch.float)
         t_sym0 = torch.rand((args.n_sym_axis, 1), dtype=torch.float)
-        u_pos0 = PINN(torch.cat([r_sym0, z_sym0, t_sym0], dim=1))
-        u_neg0 = PINN(torch.cat([r_sym0, -z_sym0, t_sym0], dim=1))
+        u_pos0 = args.u_scale * PINN(torch.cat([r_sym0, z_sym0, t_sym0], dim=1))
+        u_neg0 = args.u_scale * PINN(torch.cat([r_sym0, -z_sym0, t_sym0], dim=1))
         mse_SYM0 = args.criterion(u_pos0 - u_neg0, torch.zeros_like(u_pos0))
 
-        # mid-plane Neumann symmetry condition: ∂A_theta/∂z = 0 at z=0
+        # mid-plane Neumann symmetry: ∂A_theta/∂z = 0 at z=0
         r_mid = (r_max * torch.rand((args.n_mid, 1), dtype=torch.float) ** 2).requires_grad_(True)
         z_mid = torch.zeros((args.n_mid, 1), dtype=torch.float).requires_grad_(True)
         t_mid = torch.rand((args.n_mid, 1), dtype=torch.float).requires_grad_(True)
-        u_mid = PINN(torch.cat([r_mid, z_mid, t_mid], dim=1))
+        u_mid = args.u_scale * PINN(torch.cat([r_mid, z_mid, t_mid], dim=1))
         A_mid = r_mid * u_mid
         dA_dz_mid = d(A_mid, z_mid)
         mse_MID = args.criterion(dA_dz_mid, torch.zeros_like(dA_dz_mid))
 
-        # axis regularity (r=0): A_theta(0,z,t) = 0  (since A_theta = r*u)
-        r_axis = (0.0 * torch.ones((args.n_f, 1), dtype=torch.float)).requires_grad_(True)
-        z_axis = (0.1 * (2 * torch.rand((args.n_f, 1), dtype=torch.float) - 1)).requires_grad_(True)
-        t_axis = torch.rand((args.n_f, 1), dtype=torch.float).requires_grad_(True)
-        u_axis = PINN(torch.cat([r_axis, z_axis, t_axis], dim=1))
-        A_axis = r_axis * u_axis
-        mse_IC = args.criterion(A_axis, torch.zeros_like(A_axis))
+        # Initial condition: with a sinusoidal drive, current is 0 at t=0, so A_theta should be ~0.
+        # Enforce A_theta(r,z,t=0)=0 over the full domain (this is non-trivial, unlike enforcing at r=0).
+        r_ic = (r_max * torch.rand((args.n_f, 1), dtype=torch.float) ** 2).requires_grad_(True)
+        z_ic = (0.1 * (2 * torch.rand((args.n_f, 1), dtype=torch.float) - 1)).requires_grad_(True)
+        t_ic = torch.zeros((args.n_f, 1), dtype=torch.float).requires_grad_(True)
+        u_ic = args.u_scale * PINN(torch.cat([r_ic, z_ic, t_ic], dim=1))
+        A_ic = r_ic * u_ic
+        mse_IC = args.criterion(A_ic, torch.zeros_like(A_ic))
 
         # loss
         loss = (
@@ -209,8 +245,7 @@ def train(args):
         loss.backward()
         optimizer.step()
 
-    # plot_result(PINN, scale=10000.0)
-    # Field plot on the y-z plane
+    # plot_result(PINN, scale=1000.0)
     plot_B_yz(PINN, scale_factor=10.0, t=0.495)
 
 def plot_B_yz(
@@ -221,19 +256,13 @@ def plot_B_yz(
     scale_factor: float = 100.0,
     t: float = 0.5,
 ):
-    """Plot scalar B on the z-axis (r=0).
+    """Plot scalar Bz on the z-axis (r=0).
 
-    On the axis for an axisymmetric solenoid:
-      - B_r(0,z) = 0
-      - B_theta(0,z) = 0
-      - Only B_z(0,z) is non-zero.
-
-    With the axis-regular parameterization A_theta = r*u:
-      B_z = (1/r) ∂(r A_theta)/∂r = 2u + r*u_r  ->  B_z(0,z) = 2u(0,z)
+    With A_theta = r*u:
+      B_z(0,z) = 2u(0,z)
     """
     device = next(PINN.parameters()).device
 
-    # Evaluate on-axis: r=0 for all z
     z = torch.linspace(z_min, z_max, n_z, device=device).reshape(-1, 1)
     r = torch.zeros_like(z)
     t_f = torch.full_like(z, float(t))
@@ -241,7 +270,7 @@ def plot_B_yz(
     inp = torch.cat([r, z, t_f], dim=1)
     with torch.no_grad():
         u = PINN(inp)
-        Bz = scale_factor * (2.0 * u)  # Bz(0,z) = 2u(0,z)
+        Bz = scale_factor * (2.0 * u)
 
     z_np = z.squeeze(1).detach().cpu().numpy()
     Bz_np = Bz.squeeze(1).detach().cpu().numpy()
@@ -333,7 +362,7 @@ if __name__ == "__main__":
     class ARGS():
         def __init__(self):
             self.seq_net = [3, 100, 100, 100, 100, 100, 100, 1]
-            self.epochs = 200
+            self.epochs = 500
             self.n_f = 10000
             # self.n_f_1 = 10000
             # self.n_f_2 = 10000
@@ -342,15 +371,16 @@ if __name__ == "__main__":
             self.n_sym = 5000
             self.n_sym_axis = 10000
             self.n_mid = 5000
+            # Loss weights: raw mse_PDE is ~1e-3..1e-2 while mse_BC is ~1e-22,
+            # so BC needs a very large weight to matter in the total loss.
             self.PDE_panelty = 1.0
-            self.BC_panelty = 1.0
-            self.ZBC_panelty = 1.0
-            # symmetry weights: these often need to be much larger than PDE to force parity
-            self.SYM_panelty = 50.0
-            self.SYM0_panelty = 1000.0
-            self.MID_panelty = 100.0
+            self.BC_panelty = 1e19
+            self.ZBC_panelty = 1e19
+            self.SYM_panelty = 1e18
+            self.SYM0_panelty = 1e19
+            self.MID_panelty = 1e18
             self.BC_inner_panelty = 1.0
-            self.IC_panelty = 1.0
+            self.IC_panelty = 1e19
             self.lr = 0.001
             self.criterion = torch.nn.MSELoss()
             self.optimizer = torch.optim.Adam
@@ -371,6 +401,14 @@ if __name__ == "__main__":
             # smoothing controls for trainable "sheet" current
             self.sigma_r = 0.002
             self.z_sharpness = 200.0
+            # ferrite ring (MnZn core) inside each coil
+            self.core_r_inner = 0.02
+            self.core_r_outer = 0.04
+            self.core_sharpness = 400.0
+            # MnZn ferrite can have very high μr; start moderate for training stability
+            self.mu_r_core = 200.0
+            # output scaling for u so A_theta=r*u has realistic magnitude
+            self.u_scale = 1e-6
 
 
     args = ARGS()
